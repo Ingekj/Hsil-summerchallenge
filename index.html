@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>HSIL J2013 Sommerchallenge 2026</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f0fdf4; min-height: 100vh; }
+    #app { max-width: 480px; margin: 0 auto; padding-bottom: 40px; }
+
+    /* HERO */
+    .hero { background: linear-gradient(135deg, #15803d 0%, #16a34a 60%, #22c55e 100%);
+      color: #fff; text-align: center; padding: 36px 20px 28px; border-radius: 0 0 24px 24px; }
+    .hero-emojis { font-size: 32px; margin-bottom: 8px; }
+    .hero h1 { font-size: 32px; font-weight: 900; letter-spacing: 2px; }
+    .hero-sub { font-size: 13px; font-weight: 700; letter-spacing: 3px; opacity: .85; margin-top: 4px; }
+    .hero-tagline { font-size: 15px; margin-top: 10px; opacity: .9; }
+
+    /* CARDS */
+    .card { background: #fff; border-radius: 16px; margin: 12px 12px 0; padding: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+    /* TEAM */
+    .team-label { font-weight: 700; font-size: 15px; color: #374151; margin-bottom: 4px; }
+    .team-points { font-size: 48px; font-weight: 900; color: #16a34a; line-height: 1.1; margin-bottom: 10px; }
+    .motto { font-size: 13px; color: #6b7280; text-align: center; margin-top: 10px; }
+
+    /* GOAL BAR */
+    .goal-bar { margin-bottom: 10px; }
+    .goal-bar-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; }
+    .goal-bar-top span:last-child { font-weight: 600; }
+    .progress-track { height: 10px; background: #e5e7eb; border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 99px; transition: width .4s; background: #f59e0b; }
+    .progress-fill.done { background: #16a34a; }
+
+    /* PLAYER GRID */
+    .section-title { font-weight: 700; font-size: 16px; color: #374151; margin-bottom: 10px; }
+    .search-input { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1.5px solid #d1d5db;
+      font-size: 15px; margin-bottom: 10px; outline: none; }
+    .player-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .player-btn { display: flex; align-items: center; gap: 6px; background: #f0fdf4;
+      border: 1.5px solid #bbf7d0; border-radius: 10px; padding: 10px; cursor: pointer; text-align: left; width: 100%; }
+    .player-emoji { font-size: 20px; }
+    .player-name { flex: 1; font-weight: 600; font-size: 14px; color: #15803d; }
+    .player-pts { font-size: 12px; color: #6b7280; font-weight: 600; }
+
+    /* NAV */
+    .nav-row { display: flex; gap: 10px; margin: 12px 12px 0; }
+    .nav-btn { flex: 1; background: #fff; border: 1.5px solid #d1d5db; border-radius: 10px;
+      padding: 12px 8px; font-weight: 600; font-size: 14px; cursor: pointer; color: #374151; }
+
+    /* TOP BAR */
+    .top-bar { display: flex; align-items: center; gap: 12px; padding: 14px 14px 0; margin-bottom: 4px; }
+    .back-btn { background: none; border: none; font-size: 15px; color: #16a34a;
+      font-weight: 600; cursor: pointer; padding: 0; }
+    .top-title { font-weight: 800; font-size: 18px; color: #15803d; }
+
+    /* PLAYER VIEW */
+    .big-points { font-size: 56px; font-weight: 900; color: #16a34a; line-height: 1; }
+    .level-badge { font-weight: 700; font-size: 22px; margin-top: 4px; }
+    .progress-label { font-size: 13px; color: #6b7280; margin-bottom: 4px; margin-top: 10px; }
+    .save-status { margin-top: 8px; height: 20px; font-size: 13px; }
+    .save-status.saving { color: #9ca3af; }
+    .save-status.saved { color: #16a34a; font-weight: 600; }
+
+    /* ACTIVITY */
+    .cat-title { font-weight: 800; font-size: 15px; margin-bottom: 10px; }
+    .act-row { display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid #f3f4f6; }
+    .act-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .act-info { flex: 1; padding-right: 8px; }
+    .act-label { font-size: 14px; color: #374151; font-weight: 500; display: block; }
+    .act-sub { font-size: 12px; color: #9ca3af; }
+    .act-controls { display: flex; align-items: center; gap: 6px; }
+    .counter-btn { width: 32px; height: 32px; border-radius: 8px; border: none;
+      font-size: 18px; font-weight: 700; cursor: pointer; color: #374151; background: #f3f4f6; }
+    .counter-btn.plus { background: #16a34a; color: #fff; }
+    .counter-btn.plus.disabled { background: #d1d5db; cursor: default; }
+    .counter-val { min-width: 28px; text-align: center; font-weight: 700; font-size: 16px; color: #111827; }
+    .free-input { width: 58px; padding: 6px 8px; border-radius: 8px;
+      border: 1.5px solid #d1d5db; font-size: 15px; text-align: center; }
+
+    /* LEADERBOARD */
+    .lb-row { display: flex; align-items: center; gap: 10px; padding: 9px 6px; border-radius: 8px; margin-bottom: 2px; }
+    .lb-rank { width: 24px; font-weight: 700; color: #9ca3af; font-size: 14px; }
+    .lb-emoji { font-size: 20px; }
+    .lb-name { flex: 1; font-weight: 600; color: #374151; }
+    .lb-pts { font-weight: 800; color: #16a34a; font-size: 15px; }
+
+    /* INFO */
+    .info-section { margin-bottom: 16px; line-height: 1.9; }
+    .info-section b { display: block; margin-bottom: 4px; }
+
+    /* LOADING */
+    .loading { text-align: center; padding: 40px; color: #9ca3af; font-size: 18px; }
+
+
+    /* DRIVE BUTTON */
+    .drive-card { background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 16px;
+      margin: 12px 12px 0; padding: 16px; text-align: center; }
+    .drive-btn { display: inline-flex; align-items: center; gap: 10px; background: #1d4ed8;
+      color: #fff; border: none; border-radius: 12px; padding: 14px 24px;
+      font-size: 16px; font-weight: 700; cursor: pointer; text-decoration: none; }
+    .drive-btn:active { background: #1e40af; }
+    .drive-hint { font-size: 13px; color: #6b7280; margin-top: 10px; }
+
+    /* CONFIG BANNER */
+    .config-banner { background: #fef3c7; border: 1.5px solid #f59e0b; border-radius: 12px;
+      margin: 12px; padding: 14px; font-size: 14px; line-height: 1.6; }
+    .config-banner b { color: #92400e; }
+    .config-banner code { background: #fde68a; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ─── KONFIGURASJON ────────────────────────────────────────────────────────────
+// Lim inn din Firebase Realtime Database URL her:
+const FIREBASE_URL = "https://hsil-summerchallenge-default-rtdb.europe-west1.firebasedatabase.app"; // f.eks. https://hsil-xxx-default-rtdb.firebaseio.com
+const DRIVE_URL = "https://drive.google.com/drive/folders/1jkJ6GKz9__2KOoDpLoDmmlXxStJULIR-";
+// ─────────────────────────────────────────────────────────────────────────────
+
+const PLAYERS = [
+  "Amalie","Andrea","Anna","Astrid","Camilla","Dina","Ea","Elise","Ella",
+  "Emma","Frida","Hannah","Hedda","Helene","Ida","Ingrid","Johanne","Julie",
+  "Karoline","Katrine","Kristine","Laura","Lena","Lina","Maja","Maria",
+  "Marie","Martine","Mathilde","Mia","Nora","Rebekka","Sara","Signe",
+  "Sigrid","Sofie","Solveig","Thea","Tuva","Vilde"
+];
+
+const ACTIVITIES = [
+  { cat: "fotball", label: "⚽ Fotball", color: "#16a34a", items: [
+    { id: "egentrening",  label: "15 min egentrening",              points: 1,  unit: "gang" },
+    { id: "pasninger",    label: "100 pasninger",                   points: 1,  unit: "gang" },
+    { id: "avslutninger", label: "20 avslutninger",                 points: 1,  unit: "gang" },
+    { id: "jonglering",   label: "50 jongleringer",                 points: 2,  unit: "gang" },
+    { id: "finte",        label: "Lær en ny finte",                 points: 3,  unit: "gang" },
+    { id: "egnookt",      label: "Lag din egen treningsøkt",        points: 3,  unit: "gang" },
+  ]},
+  { cat: "aktiv", label: "🏃 Aktiv sommer", color: "#0284c7", items: [
+    { id: "aktivitet30",  label: "30 min sykling/jogging/svømming", points: 1,  unit: "gang" },
+    { id: "tur",          label: "Tur i skogen eller på fjellet",   points: 2,  unit: "gang" },
+    { id: "strandball",   label: "Fotball på strand/camping/morsomt sted", points: 3, unit: "gang" },
+  ]},
+  { cat: "lagvenninne", label: "👭 Lagvenninne-bonus", color: "#9333ea", items: [
+    { id: "tren30",       label: "Tren med lagvenninne (30 min)",   points: 5,  unit: "gang" },
+    { id: "tren60",       label: "Tren med lagvenninner (60 min)",  points: 10, unit: "gang" },
+  ]},
+  { cat: "ekstra", label: "🎯 Ekstra utfordringer", color: "#d97706", items: [
+    { id: "p1000",        label: "1000-pasningsklubben (hele sommeren)", points: 10, unit: "fullført", max: 1 },
+  ]},
+  { cat: "video", label: "🎥 Video-bonus", color: "#dc2626", items: [
+    { id: "vid_finte",    label: "Video: Ny finte",                 points: 5,  unit: "video" },
+    { id: "vid_feiring",  label: "Video: Målfeiring",               points: 5,  unit: "video" },
+    { id: "vid_sted",     label: "Video: Fotball på spesielt sted", points: 5,  unit: "video" },
+    { id: "vid_challenge",label: "Video: Din egen challenge",       points: 10, unit: "video" },
+  ]},
+  { cat: "trener", label: "⭐ Trenerbonus", color: "#0891b2", items: [
+    { id: "trenerbonus",  label: "Trenerbonus (poeng fra trener)",  points: 1,  unit: "poeng", freeInput: true },
+  ]},
+];
+
+const LEVELS = [
+  { name: "Bronse", emoji: "🥉", min: 25, color: "#cd7f32" },
+  { name: "Sølv",   emoji: "🥈", min: 50, color: "#9ca3af" },
+  { name: "Gull",   emoji: "🥇", min: 75, color: "#d4af37" },
+  { name: "Diamant",emoji: "💎", min: 100, color: "#7c3aed" },
+];
+
+function getLevel(pts) {
+  let lvl = null;
+  for (const l of LEVELS) if (pts >= l.min) lvl = l;
+  return lvl;
+}
+function getNextLevel(pts) {
+  for (const l of LEVELS) if (pts < l.min) return l;
+  return null;
+}
+function calcPoints(logs) {
+  let total = 0;
+  for (const cat of ACTIVITIES)
+    for (const item of cat.items) {
+      const count = (logs && logs[item.id]) || 0;
+      if (item.freeInput) total += count;
+      else if (item.max) total += Math.min(count, item.max) * item.points;
+      else total += count * item.points;
+    }
+  return total;
+}
+
+// ─── Firebase helpers (REST API, no SDK needed) ───────────────────────────────
+function fbUrl(path) { return `${FIREBASE_URL}/${path}.json`; }
+
+async function fbGet(path) {
+  const res = await fetch(fbUrl(path));
+  return res.ok ? res.json() : null;
+}
+async function fbSet(path, data) {
+  await fetch(fbUrl(path), { method: "PUT", body: JSON.stringify(data) });
+}
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let view = "home"; // home | player | leaderboard | info
+let currentPlayer = null;
+let allData = {};
+let loading = true;
+let saveStatus = ""; // "" | "saving" | "saved"
+
+async function loadAll() {
+  loading = true; render();
+  const data = await fbGet("players");
+  allData = data || {};
+  loading = false; render();
+}
+
+async function savePlayerData(name, logs) {
+  saveStatus = "saving"; render();
+  await fbSet(`players/${name.toLowerCase().replace(/\s/g,"_")}`, logs);
+  allData[name] = logs;
+  saveStatus = "saved"; render();
+  setTimeout(() => { saveStatus = ""; render(); }, 2500);
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+const app = document.getElementById("app");
+
+function render() {
+  if (FIREBASE_URL === "DIN_FIREBASE_URL_HER") {
+    app.innerHTML = configBanner(); return;
+  }
+  if (view === "home")        { app.innerHTML = renderHome(); }
+  else if (view === "player") { app.innerHTML = renderPlayer(); }
+  else if (view === "leaderboard") { app.innerHTML = renderLeaderboard(); }
+  else if (view === "info")   { app.innerHTML = renderInfo(); }
+  attachEvents();
+}
+
+function configBanner() {
+  return `<div class="config-banner">
+    <b>⚙️ Sett opp Firebase</b><br>
+    Filen er klar, men du må legge inn din Firebase URL.<br><br>
+    Åpne HTML-filen i et tekstredigeringsprogram og bytt ut:<br>
+    <code>DIN_FIREBASE_URL_HER</code><br>
+    med din database-URL, f.eks.:<br>
+    <code>https://hsil-xxx-default-rtdb.firebaseio.com</code>
+  </div>`;
+}
+
+function teamTotal() {
+  return PLAYERS.reduce((s, p) => s + calcPoints(allData[p.toLowerCase().replace(/\s/g,"_")] || {}), 0);
+}
+function playerPts(name) {
+  return calcPoints(allData[name.toLowerCase().replace(/\s/g,"_")] || {});
+}
+function playerKey(name) { return name.toLowerCase().replace(/\s/g,"_"); }
+
+function goalBar(total, goal, label) {
+  const pct = Math.min(100, (total/goal)*100);
+  const done = total >= goal;
+  return `<div class="goal-bar">
+    <div class="goal-bar-top"><span>${label}</span>
+      <span style="color:${done?"#16a34a":"#374151"}">${done?"✅ Nådd!":total+"/"+goal}</span></div>
+    <div class="progress-track"><div class="progress-fill${done?" done":""}" style="width:${pct}%"></div></div>
+  </div>`;
+}
+
+function renderHome() {
+  const total = teamTotal();
+  const search = window._search || "";
+  const filtered = PLAYERS.filter(p => p.toLowerCase().includes(search.toLowerCase()));
+  return `
+  <div class="hero">
+    <div class="hero-emojis">☀️ ⚽ ☀️</div>
+    <h1>HSIL J2013</h1>
+    <div class="hero-sub">SOMMERCHALLENGE 2026</div>
+    <p class="hero-tagline">Samle poeng. Nå nye nivåer. Hjelp laget!</p>
+  </div>
+  <div class="card">
+    <div class="team-label">🏆 Lagets totale poeng</div>
+    ${loading ? `<div class="team-points" style="color:#9ca3af;font-size:28px">Laster…</div>`
+               : `<div class="team-points">${total}</div>`}
+    ${goalBar(total, 800,  "🍦 Is til laget")}
+    ${goalBar(total, 1200, "🍕 Foreldre vs jenter + pizza")}
+    <p class="motto">💙❤️ Alle bidrag teller – sammen klarer vi det!</p>
+  </div>
+  <div class="card">
+    <div class="section-title">Hvem er du?</div>
+    <input class="search-input" id="search" placeholder="Søk etter navn…" value="${search}" />
+    <div class="player-grid">
+      ${filtered.map(p => {
+        const pts = playerPts(p);
+        const lvl = getLevel(pts);
+        return `<button class="player-btn" data-player="${p}">
+          <span class="player-emoji">${lvl ? lvl.emoji : "🎽"}</span>
+          <span class="player-name">${p}</span>
+          ${pts > 0 ? `<span class="player-pts">${pts}p</span>` : ""}
+        </button>`;
+      }).join("")}
+    </div>
+  </div>
+  <div class="nav-row">
+    <button class="nav-btn" id="go-leaderboard">📊 Poengtavle</button>
+    <button class="nav-btn" id="go-info">ℹ️ Om challengen</button>
+  </div>`;
+}
+
+function renderPlayer() {
+  const key = playerKey(currentPlayer);
+  const logs = allData[key] || {};
+  const pts = calcPoints(logs);
+  const lvl = getLevel(pts);
+  const next = getNextLevel(pts);
+  const pct = next ? Math.min(100, (pts/next.min)*100) : 100;
+
+  return `
+  <div class="top-bar">
+    <button class="back-btn" id="go-home">← Tilbake</button>
+    <span class="top-title">${currentPlayer}</span>
+  </div>
+  <div class="card" style="text-align:center">
+    <div class="big-points">${pts} poeng</div>
+    ${lvl ? `<div class="level-badge" style="color:${lvl.color}">${lvl.emoji} ${lvl.name}!</div>` : ""}
+    ${next ? `<div class="progress-label">Neste: ${next.emoji} ${next.name} – ${next.min-pts} poeng igjen</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>` : ""}
+    ${!next && lvl ? `<div style="margin-top:8px;color:#7c3aed;font-weight:700">💎 Toppnivå nådd! 🎉</div>` : ""}
+    <div class="save-status ${saveStatus}">${
+      saveStatus === "saving" ? "Lagrer…" :
+      saveStatus === "saved"  ? "✓ Lagret for alle" : "&nbsp;"
+    }</div>
+  </div>
+  ${ACTIVITIES.map(cat => `
+    <div class="card">
+      <div class="cat-title" style="color:${cat.color}">${cat.label}</div>
+      ${cat.items.map(item => {
+        const val = logs[item.id] || 0;
+        if (item.freeInput) return `
+          <div class="act-row">
+            <div class="act-info">
+              <span class="act-label">${item.label}</span>
+              <span class="act-sub">Antall poeng fra trener</span>
+            </div>
+            <div class="act-controls">
+              <input class="free-input" type="number" min="0" data-id="${item.id}" value="${val||""}" placeholder="0" />
+              <span style="font-size:12px;color:#64748b">p</span>
+            </div>
+          </div>`;
+        const atMax = item.max && val >= item.max;
+        return `
+          <div class="act-row">
+            <div class="act-info">
+              <span class="act-label">${item.label}</span>
+              <span class="act-sub">+${item.points} p / ${item.unit}${item.max?` (maks ${item.max})`:""}</span>
+            </div>
+            <div class="act-controls">
+              <button class="counter-btn minus" data-id="${item.id}" data-val="${val}" data-max="${item.max||""}">−</button>
+              <span class="counter-val">${val}${item.max?"/"+item.max:""}</span>
+              <button class="counter-btn plus${atMax?" disabled":""}" data-id="${item.id}" data-val="${val}" data-max="${item.max||""}">+</button>
+            </div>
+          </div>`;
+      }).join("")}
+    </div>`).join("")}
+  <div class="drive-card">
+    <div style="font-weight:700;font-size:15px;color:#1e40af;margin-bottom:10px">🎥 Last opp video til laget</div>
+    <a class="drive-btn" href="${DRIVE_URL}" target="_blank">
+      <span>📁</span> Åpne Google Drive
+    </a>
+    <p class="drive-hint">Last opp video av ny finte, målfeiring,<br>fotball på morsomt sted eller din egen challenge</p>
+  </div>
+  <div style="height:32px"></div>`;
+}
+
+function renderLeaderboard() {
+  const total = teamTotal();
+  const board = PLAYERS.map(p => ({ name: p, pts: playerPts(p) })).sort((a,b) => b.pts-a.pts);
+  return `
+  <div class="top-bar">
+    <button class="back-btn" id="go-home">← Tilbake</button>
+    <span class="top-title">📊 Poengtavle</span>
+  </div>
+  <div class="card">
+    <div class="team-label">🏆 Lagstotal: ${total} poeng</div>
+    ${goalBar(total, 800,  "🍦 Is – 800p")}
+    ${goalBar(total, 1200, "🍕 Pizza – 1200p")}
+  </div>
+  <div class="card">
+    ${board.map((p,i) => {
+      const lvl = getLevel(p.pts);
+      return `<div class="lb-row" style="background:${i<3?"#fefce8":"transparent"}">
+        <span class="lb-rank">${i+1}.</span>
+        <span class="lb-emoji">${lvl ? lvl.emoji : "🎽"}</span>
+        <span class="lb-name">${p.name}</span>
+        <span class="lb-pts">${p.pts > 0 ? p.pts+" p" : "–"}</span>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+function renderInfo() {
+  return `
+  <div class="top-bar">
+    <button class="back-btn" id="go-home">← Tilbake</button>
+    <span class="top-title">ℹ️ Om challengen</span>
+  </div>
+  <div class="card">
+    <div class="info-section"><b>🏅 Nivåer</b>
+      ${LEVELS.map(l => `<div style="color:${l.color};font-weight:600">${l.emoji} ${l.name} – ${l.min} poeng</div>`).join("")}
+    </div>
+    <div class="info-section"><b>🏆 Lagmål</b>
+      <div>800 poeng → 🍦 Is til hele laget</div>
+      <div>1200 poeng → 🍕 Foreldre-kamp + pizza</div>
+    </div>
+    <div class="info-section"><b>🏆 Sommerens priser</b>
+      <div>🏆 Sommerens fotballjente</div>
+      <div>⭐ Sommerens lagspiller</div>
+      <div>🔥 Størst innsats</div>
+      <div>🎨 Mest kreative bidrag</div>
+    </div>
+    <div class="info-section"><b>💙 Viktigst av alt</b>
+      <div>⚽ Ha det gøy · Vær aktiv · Utfordre deg selv</div>
+      <div>⚽ Møt lagvenninner · Skap gode sommerminner</div>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:18px">☀️ GOD SOMMER FRA TRENERNE! ☀️</div>
+  </div>`;
+}
+
+// ─── Events ───────────────────────────────────────────────────────────────────
+function attachEvents() {
+  // Home
+  const searchEl = document.getElementById("search");
+  if (searchEl) {
+    searchEl.addEventListener("input", e => { window._search = e.target.value; render(); });
+    searchEl.focus();
+  }
+  document.querySelectorAll(".player-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentPlayer = btn.dataset.player;
+      saveStatus = "";
+      view = "player";
+      // Load fresh data for this player
+      const key = playerKey(currentPlayer);
+      fbGet(`players/${key}`).then(data => {
+        if (data) allData[key] = data;
+        render();
+      });
+      render();
+    });
+  });
+  const goLb = document.getElementById("go-leaderboard");
+  if (goLb) goLb.addEventListener("click", () => { view="leaderboard"; render(); });
+  const goInfo = document.getElementById("go-info");
+  if (goInfo) goInfo.addEventListener("click", () => { view="info"; render(); });
+
+  // Back button
+  document.querySelectorAll("#go-home").forEach(btn => {
+    btn.addEventListener("click", () => { view="home"; window._search=""; loadAll(); });
+  });
+
+  // Counter buttons
+  document.querySelectorAll(".counter-btn.minus").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      const val = parseInt(btn.dataset.val) || 0;
+      if (val <= 0) return;
+      const key = playerKey(currentPlayer);
+      const logs = { ...(allData[key] || {}), [id]: val - 1 };
+      allData[key] = logs;
+      savePlayerData(currentPlayer, logs);
+    });
+  });
+  document.querySelectorAll(".counter-btn.plus:not(.disabled)").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      const val = parseInt(btn.dataset.val) || 0;
+      const max = btn.dataset.max ? parseInt(btn.dataset.max) : null;
+      if (max && val >= max) return;
+      const key = playerKey(currentPlayer);
+      const logs = { ...(allData[key] || {}), [id]: val + 1 };
+      allData[key] = logs;
+      savePlayerData(currentPlayer, logs);
+    });
+  });
+
+  // Free input
+  document.querySelectorAll(".free-input").forEach(input => {
+    input.addEventListener("change", () => {
+      const id = input.dataset.id;
+      const val = Math.max(0, parseInt(input.value) || 0);
+      const key = playerKey(currentPlayer);
+      const logs = { ...(allData[key] || {}), [id]: val };
+      allData[key] = logs;
+      savePlayerData(currentPlayer, logs);
+    });
+  });
+}
+
+// ─── Start ────────────────────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
