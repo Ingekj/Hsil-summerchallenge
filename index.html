@@ -256,6 +256,7 @@ let saveStatus = "";
 let formError = "";
 let selectedRole = "player";
 let bonusSaveMsg = "";
+let pinLoginTarget = null;
 
 let session = null;
 try { session = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch {}
@@ -332,21 +333,42 @@ async function saveTrainerBonus(playerName, pts) {
 }
 
 // ─── Register ─────────────────────────────────────────────────────────────────
-async function registerPlayer(name, code) {
+function hashPin(pin) { let hv=0; for(let i=0;i<pin.length;i++){hv=((hv<<5)-hv)+pin.charCodeAt(i);hv|=0;} return hv.toString(36); }
+
+async function registerPlayer(name, code, pin) {
   if(!name){formError="Skriv inn fullt navn.";render();return;}
   if(!name.includes(" ")){formError="Skriv fornavn og etternavn.";render();return;}
   if(code!==team().playerCode){formError="Feil lagkode. Spør en trener!";render();return;}
+  if(!pin||pin.length!==4||!/^\d{4}$/.test(pin)){formError="PIN-kode må være 4 siffer.";render();return;}
   const key=playerKey(name);
-  const existing=await fbGet(`teams/${currentTeamId}/${key}/__name__`);
-  if(existing&&existing!==name){formError="En spiller med dette navnet finnes allerede.";render();return;}
-  await fbSet(`teams/${currentTeamId}/${key}/__name__`,name);
+  const existingData=await fbGet(`teams/${currentTeamId}/${key}`);
+  if(existingData&&existingData.__name__&&existingData.__name__!==name){formError="En spiller med dette navnet finnes allerede.";render();return;}
+  if(existingData&&existingData.__pin__){formError="Denne spilleren er allerede registrert. Logg inn fra listen.";render();return;}
+  const pinHash=hashPin(pin);
   if(!allData[currentTeamId]) allData[currentTeamId]={};
   if(!allData[currentTeamId][key]) allData[currentTeamId][key]={};
+  await fbSet(`teams/${currentTeamId}/${key}/__name__`,name);
+  await fbSet(`teams/${currentTeamId}/${key}/__pin__`,pinHash);
   allData[currentTeamId][key].__name__=name;
+  allData[currentTeamId][key].__pin__=pinHash;
   if(!playerList[currentTeamId]) playerList[currentTeamId]=[];
   if(!playerList[currentTeamId].includes(name)) playerList[currentTeamId].push(name);
-  localStorage.setItem(STORAGE_KEY,JSON.stringify({name,role:"player",teamId:currentTeamId}));
+  localStorage.setItem(STORAGE_KEY,JSON.stringify({name,role:"player",teamId:currentTeamId,pinHash}));
   currentPlayer=name; isTrainer=false; saveStatus=""; view="player"; render();
+}
+
+async function loginWithPin(name, pin) {
+  if(!pin||pin.length!==4){formError="Skriv inn 4-sifret PIN.";render();return;}
+  const key=playerKey(name);
+  const data=await fbGet(`teams/${currentTeamId}/${key}`);
+  if(!data){formError="Spilleren finnes ikke.";render();return;}
+  if(!data.__pin__){formError="Ingen PIN registrert. Registrer deg på nytt.";render();return;}
+  if(hashPin(pin)!==data.__pin__){formError="Feil PIN-kode. Prøv igjen.";render();return;}
+  allData[currentTeamId][key]=data;
+  currentPlayer=name;
+  const pinHash=data.__pin__;
+  localStorage.setItem(STORAGE_KEY,JSON.stringify({name,role:"player",teamId:currentTeamId,pinHash}));
+  saveStatus=""; view="player"; render();
 }
 
 function loginTrainer(code) {
@@ -363,6 +385,7 @@ function render() {
   if(view==="home") app.innerHTML=renderHome();
   else if(view==="team-select") app.innerHTML=renderTeamSelect();
   else if(view==="register") app.innerHTML=renderRegister();
+  else if(view==="pin-login") app.innerHTML=renderPinLogin();
   else if(view==="player") app.innerHTML=renderPlayer();
   else if(view==="trainer") app.innerHTML=renderTrainer();
   else if(view==="trainer-detail") app.innerHTML=renderTrainerDetail();
@@ -409,6 +432,22 @@ function renderHome() {
   </div>`;
 }
 
+// ─── PIN LOGIN ────────────────────────────────────────────────────────────────
+function renderPinLogin() {
+  const name=pinLoginTarget||"";
+  const first=name.split(" ")[0];
+  return heroHtml(team().name) + `
+  <div class="form-card">
+    <div class="form-title">🔐 Logg inn</div>
+    <div class="form-sub">Hei <b>${first}</b>! Skriv inn din PIN-kode for å logge inn.</div>
+    <label class="form-label">PIN-kode (4 siffer)</label>
+    <input class="name-input" id="pin-login-input" type="password" inputmode="numeric" maxlength="4" placeholder="____" style="font-size:24px;letter-spacing:8px;text-align:center"/>
+    ${formError?`<div class="form-error">${formError}</div>`:""}
+    <button class="submit-btn" id="do-pin-login" style="margin-top:12px">Logg inn →</button>
+    <div class="back-link"><button id="go-back-team">← Tilbake</button></div>
+  </div>`;
+}
+
 // ─── TEAM HOME ────────────────────────────────────────────────────────────────
 function renderTeamSelect() {
   const t=team();
@@ -425,10 +464,10 @@ function renderTeamSelect() {
   </div>
   <div class="card">
     <div class="section-title">👋 Hvem er du?</div>
-    <button class="submit-btn" id="go-register" style="margin-bottom:${sorted.length?'16px':'0'}">
-      + Registrer meg / logg inn
+    <button class="submit-btn" id="go-register" style="margin-bottom:${sorted.length?'16px':'0'};background:#16a34a">
+      + Ny spiller? Registrer deg her
     </button>
-    ${sorted.length?`<div style="font-size:13px;color:#6b7280;margin-bottom:8px;margin-top:4px">Eller velg deg fra listen:</div>
+    ${sorted.length?`<div style="font-size:13px;color:#6b7280;margin-bottom:8px;margin-top:4px">Allerede registrert? Trykk på ditt navn:</div>
     <div class="player-list">
       ${sorted.map(name=>{
         const pts=calcPoints(allData[currentTeamId][playerKey(name)],currentTeamId);
@@ -455,10 +494,10 @@ function renderRegister() {
   const isT=selectedRole==="trainer";
   return heroHtml(team().name) + `
   <div class="form-card">
-    <div class="form-title ${isT?"trainer":""}">${isT?"🏅 Trener-innlogging":"👋 Bli med i utfordringen"}</div>
-    <div class="form-sub">${isT?"Logg inn med trenerkoden din.":"Skriv inn navnet ditt og lagkoden for å delta."}</div>
+    <div class="form-title ${isT?"trainer":""}">${isT?"🏅 Trener-innlogging":"👋 Ny spiller – registrer deg"}</div>
+    <div class="form-sub">${isT?"Logg inn med trenerkoden din.":"Første gang? Fyll ut skjemaet under."}</div>
     <div class="role-row">
-      <button class="role-btn ${!isT?"active":""}" data-role="player">⚽ Spiller</button>
+      <button class="role-btn ${!isT?"active":""}" data-role="player">⚽ Ny spiller</button>
       <button class="role-btn ${isT?"trainer-active":""}" data-role="trainer">🏅 Trener</button>
     </div>
     ${!isT?`
@@ -466,7 +505,10 @@ function renderRegister() {
       <input class="name-input" id="name-input" type="text" placeholder="Ola Nordmann" autocomplete="name" autocorrect="off"/>
       <label class="form-label">Lagkode</label>
       <input class="name-input" id="code-input" type="password" placeholder="Lagkoden fra treneren"/>
-      <button class="submit-btn" id="do-register">Start utfordringen! ⚽</button>
+      <label class="form-label">Velg din PIN-kode (4 siffer)</label>
+      <input class="name-input" id="pin-input" type="password" inputmode="numeric" maxlength="4" placeholder="F.eks. 1234"/>
+      <div style="font-size:12px;color:#6b7280;margin-top:-8px;margin-bottom:12px">Husk PIN-koden! Du trenger den for å logge inn neste gang.</div>
+      <button class="submit-btn" id="do-register">Registrer meg ⚽</button>
     `:`
       <label class="form-label">Trenerkode</label>
       <input class="name-input trainer-input" id="trainer-code-input" type="password" placeholder="Trenerkode"/>
@@ -778,7 +820,9 @@ function attachEvents() {
     const ci=document.getElementById("code-input");
     if(ni){ni.focus();ni.addEventListener("keydown",e=>{if(e.key==="Enter")ci&&ci.focus();});}
     if(ci) ci.addEventListener("keydown",e=>{if(e.key==="Enter")doReg.click();});
-    doReg.addEventListener("click",()=>{registerPlayer(ni?ni.value.trim():"",ci?ci.value.trim():"");});
+    const pi=document.getElementById("pin-input");
+    if(pi) pi.addEventListener("keydown",e=>{if(e.key==="Enter")doReg.click();});
+    doReg.addEventListener("click",()=>{registerPlayer(ni?ni.value.trim():"",ci?ci.value.trim():"",pi?pi.value.trim():"");});
   }
 
   // Trainer login
@@ -789,18 +833,22 @@ function attachEvents() {
     doTr.addEventListener("click",()=>{loginTrainer(ti?ti.value.trim():"");});
   }
 
-  // Quick login from player list
+  // PIN login screen events
+  const doPinLogin=document.getElementById("do-pin-login");
+  if(doPinLogin){
+    const pli=document.getElementById("pin-login-input");
+    if(pli){pli.focus();pli.addEventListener("keydown",e=>{if(e.key==="Enter")doPinLogin.click();});}
+    doPinLogin.addEventListener("click",()=>{
+      loginWithPin(pinLoginTarget,pli?pli.value.trim():"");
+    });
+  }
+
+  // Quick login from player list – PIN login
   document.querySelectorAll(".player-btn[data-player]").forEach(btn=>{
     btn.addEventListener("click",()=>{
-      const name=btn.dataset.player;
-      const code=prompt(`Hei ${name.split(" ")[0]}! Skriv inn lagkoden:`);
-      if(code===null) return;
-      if(code!==team().playerCode){alert("Feil lagkode!");return;}
-      currentPlayer=name;
-      localStorage.setItem(STORAGE_KEY,JSON.stringify({name,role:"player",teamId:currentTeamId}));
-      saveStatus=""; view="player";
-      const key=playerKey(name);
-      fbGet(`teams/${currentTeamId}/${key}`).then(data=>{if(data)allData[currentTeamId][key]=data;render();});
+      pinLoginTarget=btn.dataset.player;
+      formError="";
+      view="pin-login";
       render();
     });
   });
@@ -900,8 +948,10 @@ async function init() {
       if(session.role==="trainer"){isTrainer=true;trainerTarget=teamPlayers()[0]||null;view="trainer";}
       else if(session.role==="player"&&session.name){
         const key=playerKey(session.name);
-        if(allData[currentTeamId]?.[key]?.__name__){currentPlayer=session.name;view="player";}
-        else{view="team-select";}
+        const stored=allData[currentTeamId]?.[key];
+        if(stored&&stored.__name__&&session.pinHash&&stored.__pin__===session.pinHash){
+          currentPlayer=session.name;view="player";
+        } else {view="team-select";}
       }
     }
   }
